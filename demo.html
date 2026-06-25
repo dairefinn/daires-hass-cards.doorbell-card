@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doorbell Card Demo</title>
+  <style>
+    body {
+      background: #f0f4f8;
+      font-family: sans-serif;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      padding: 32px;
+      justify-content: center;
+    }
+    h1 {
+      width: 100%;
+      text-align: center;
+      color: #333;
+      margin-bottom: 0;
+    }
+    h2 {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 8px 0 0;
+    }
+    p.sub {
+      width: 100%;
+      text-align: center;
+      color: #666;
+      margin-top: 4px;
+    }
+    daires-hass-cards-doorbell-card {
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Doorbell Card Demo</h1>
+  <p class="sub">Static previews — no Home Assistant required</p>
+
+  <h2>Examples</h2>
+  <daires-hass-cards-doorbell-card id="ex-idle"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="ex-active"></daires-hass-cards-doorbell-card>
+
+  <h2>sensor states</h2>
+  <daires-hass-cards-doorbell-card id="state-idle"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="state-ringing"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="state-motion"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="state-both"></daires-hass-cards-doorbell-card>
+
+  <h2>entity combinations</h2>
+  <daires-hass-cards-doorbell-card id="combo-all"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="combo-camera-only"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="combo-camera-portrait"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="combo-sensors-only"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="combo-doorbell-only"></daires-hass-cards-doorbell-card>
+
+  <h2>title</h2>
+  <daires-hass-cards-doorbell-card id="title-from-entity"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="title-override"></daires-hass-cards-doorbell-card>
+
+  <h2>interactions</h2>
+  <daires-hass-cards-doorbell-card id="int-tap-more-info"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="int-tap-navigate"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="int-hold-service"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="int-multi"></daires-hass-cards-doorbell-card>
+
+  <script>
+    if (!customElements.get("ha-card")) {
+      customElements.define("ha-card", class extends HTMLElement {
+        connectedCallback() {
+          this.style.cssText = "display:block;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);overflow:hidden;";
+        }
+      });
+    }
+    if (!customElements.get("hui-image")) {
+      customElements.define("hui-image", class extends HTMLElement {
+        connectedCallback() {
+          this.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:9/16;background:#111;color:#666;font-size:13px;";
+          this.textContent = "Live stream (demo)";
+        }
+      });
+    }
+  </script>
+  <script src="doorbell-card.js"></script>
+  <script>
+    const ago14m = new Date(Date.now() - 14 * 60 * 1000).toISOString();
+
+    const mockHass = {
+      states: {
+        "camera.front_door": {
+          state: "streaming",
+          attributes: { friendly_name: "Front Door Camera" },
+        },
+        "binary_sensor.doorbell_idle": {
+          state: "off",
+          attributes: { friendly_name: "Front Door Doorbell", last_triggered: ago14m },
+        },
+        "binary_sensor.doorbell_ringing": {
+          state: "on",
+          attributes: { friendly_name: "Front Door Doorbell" },
+        },
+        "binary_sensor.motion_idle": {
+          state: "off",
+          attributes: { friendly_name: "Front Door Motion" },
+        },
+        "binary_sensor.motion_active": {
+          state: "on",
+          attributes: { friendly_name: "Front Door Motion" },
+        },
+      },
+    };
+
+    function setup(id, config) {
+      const el = document.getElementById(id);
+      el.setConfig(config);
+      el.hass = mockHass;
+    }
+
+    // ── Examples ──────────────────────────────────────────────────────────────
+    setup("ex-idle",   { title: "Front Door", camera: "camera.front_door", doorbell: "binary_sensor.doorbell_idle",   motion: "binary_sensor.motion_idle"   });
+    setup("ex-active", { title: "Front Door", camera: "camera.front_door", doorbell: "binary_sensor.doorbell_ringing", motion: "binary_sensor.motion_active" });
+
+    // ── sensor states ─────────────────────────────────────────────────────────
+    setup("state-idle",    { title: "All clear",          doorbell: "binary_sensor.doorbell_idle",    motion: "binary_sensor.motion_idle"   });
+    setup("state-ringing", { title: "Doorbell ringing",   doorbell: "binary_sensor.doorbell_ringing", motion: "binary_sensor.motion_idle"   });
+    setup("state-motion",  { title: "Motion detected",    doorbell: "binary_sensor.doorbell_idle",    motion: "binary_sensor.motion_active" });
+    setup("state-both",    { title: "Ringing + motion",   doorbell: "binary_sensor.doorbell_ringing", motion: "binary_sensor.motion_active" });
+
+    // ── entity combinations ───────────────────────────────────────────────────
+    setup("combo-all",          { title: "Camera + sensors", camera: "camera.front_door", doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
+    setup("combo-camera-only",  { title: "Camera only (auto)",             camera: "camera.front_door" });
+    setup("combo-camera-portrait", { title: "Camera only (locked 9/16)",  camera: "camera.front_door", camera_aspect_ratio: "9/16" });
+    setup("combo-sensors-only", { title: "Sensors only",     doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
+    setup("combo-doorbell-only",{ title: "Doorbell only",    doorbell: "binary_sensor.doorbell_idle" });
+
+    // ── title ─────────────────────────────────────────────────────────────────
+    // Falls back to the camera/doorbell entity friendly_name
+    setup("title-from-entity", { doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
+    setup("title-override",    { title: "Back Gate", doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
+
+    // ── interactions ──────────────────────────────────────────────────────────
+    // All interaction demos use the same entity set so visual differences
+    // reflect the interaction config, not entity combinations.
+    const intBase = { camera: "camera.front_door", doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" };
+
+    setup("int-tap-more-info", {
+      ...intBase,
+      title: "Tap: more-info",
+      interactions: [
+        { action: "more-info", entity: "camera.front_door" },
+      ],
+    });
+
+    setup("int-tap-navigate", {
+      ...intBase,
+      title: "Tap: navigate",
+      interactions: [
+        { action: "navigate", path: "/lovelace/cameras" },
+      ],
+    });
+
+    setup("int-hold-service", {
+      ...intBase,
+      title: "Hold: call-service",
+      interactions: [
+        { trigger: "hold", action: "call-service", service: "notify.mobile_app", service_data: { message: "Someone at the door!" } },
+      ],
+    });
+
+    // tap → more-info, hold → navigate (multiple triggers on one card)
+    setup("int-multi", {
+      title: "Tap + hold",
+      camera: "camera.front_door",
+      doorbell: "binary_sensor.doorbell_ringing",
+      motion: "binary_sensor.motion_active",
+      interactions: [
+        { trigger: "tap", action: "more-info", entity: "camera.front_door" },
+        { trigger: "hold", action: "navigate", path: "/lovelace/cameras" },
+      ],
+    });
+
+    document.addEventListener("hass-more-info", (e) => alert(`more-info: ${e.detail.entityId}`));
+    document.addEventListener("location-changed", () => alert(`navigate: ${window.location.pathname}`));
+  </script>
+</body>
+</html>

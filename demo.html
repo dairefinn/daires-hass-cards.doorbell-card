@@ -61,6 +61,10 @@
   <daires-hass-cards-doorbell-card id="combo-sensors-only"></daires-hass-cards-doorbell-card>
   <daires-hass-cards-doorbell-card id="combo-doorbell-only"></daires-hass-cards-doorbell-card>
 
+  <h2>event entities (e.g. Nest)</h2>
+  <daires-hass-cards-doorbell-card id="event-idle"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="event-with-camera"></daires-hass-cards-doorbell-card>
+
   <h2>title</h2>
   <daires-hass-cards-doorbell-card id="title-from-entity"></daires-hass-cards-doorbell-card>
   <daires-hass-cards-doorbell-card id="title-override"></daires-hass-cards-doorbell-card>
@@ -101,6 +105,7 @@
   </script>
   <script src="doorbell-card.js"></script>
   <script>
+    const ago5m  = new Date(Date.now() -  5 * 60 * 1000).toISOString();
     const ago14m = new Date(Date.now() - 14 * 60 * 1000).toISOString();
 
     const mockHass = {
@@ -119,12 +124,15 @@
         },
         "binary_sensor.motion_idle": {
           state: "off",
-          attributes: { friendly_name: "Front Door Motion" },
+          attributes: { friendly_name: "Front Door Motion", last_triggered: ago5m },
         },
         "binary_sensor.motion_active": {
           state: "on",
           attributes: { friendly_name: "Front Door Motion" },
         },
+        // event entities (e.g. Nest doorbell) — state is the ISO timestamp of last fire
+        "event.doorbell_chime": { state: ago14m, attributes: { friendly_name: "Front Door Chime" } },
+        "event.doorbell_motion": { state: ago5m,  attributes: { friendly_name: "Front Door Motion" } },
       },
     };
 
@@ -150,6 +158,10 @@
     setup("combo-camera-portrait", { title: "Camera only (locked 9/16)",  camera: "camera.front_door", camera_aspect_ratio: "9/16" });
     setup("combo-sensors-only", { title: "Sensors only",     doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
     setup("combo-doorbell-only",{ title: "Doorbell only",    doorbell: "binary_sensor.doorbell_idle" });
+
+    // ── event entities ────────────────────────────────────────────────────────
+    setup("event-idle",        { title: "Front Door (Nest)", doorbell: "event.doorbell_chime", motion: "event.doorbell_motion" });
+    setup("event-with-camera", { title: "Front Door (Nest)", camera: "camera.front_door", doorbell: "event.doorbell_chime", motion: "event.doorbell_motion" });
 
     // ── title ─────────────────────────────────────────────────────────────────
     // Falls back to the camera/doorbell entity friendly_name

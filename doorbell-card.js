@@ -242,6 +242,7 @@ class DoorbellCard extends HTMLElement {
       : "Clear";
 
     const lastTime = this._lastFired(config.doorbell, doorbellState);
+    const lastMotionTime = this._lastFired(config.motion, motionState);
 
     const statusRows = [];
 
@@ -266,7 +267,7 @@ class DoorbellCard extends HTMLElement {
           ${this._motionSvg(isMotion)}
           <div class="row-info">
             <div class="row-name">Motion</div>
-            <div class="row-status${isMotion ? " active" : ""}">${motionLabel}</div>
+            <div class="row-status${isMotion ? " active" : ""}">${motionLabel}${lastMotionTime && !isMotion ? `<span class="time"> · ${lastMotionTime}</span>` : ""}</div>
           </div>
           ${isMotion ? `<div class="badge">Motion</div>` : ""}
         </div>

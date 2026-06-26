@@ -65,6 +65,17 @@
   <daires-hass-cards-doorbell-card id="title-from-entity"></daires-hass-cards-doorbell-card>
   <daires-hass-cards-doorbell-card id="title-override"></daires-hass-cards-doorbell-card>
 
+  <h2>stream loading</h2>
+  <daires-hass-cards-doorbell-card id="stream-always"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-never"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-motion-idle"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-motion-active"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-doorbell-idle"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-doorbell-ringing"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-entity-off"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-entity-on"></daires-hass-cards-doorbell-card>
+  <daires-hass-cards-doorbell-card id="stream-btn-hidden"></daires-hass-cards-doorbell-card>
+
   <h2>interactions</h2>
   <daires-hass-cards-doorbell-card id="int-tap-more-info"></daires-hass-cards-doorbell-card>
   <daires-hass-cards-doorbell-card id="int-tap-navigate"></daires-hass-cards-doorbell-card>
@@ -144,6 +155,18 @@
     // Falls back to the camera/doorbell entity friendly_name
     setup("title-from-entity", { doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
     setup("title-override",    { title: "Back Gate", doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" });
+
+    // ── stream loading ────────────────────────────────────────────────────────
+    const streamBase = { camera: "camera.front_door", doorbell: "binary_sensor.doorbell_idle", motion: "binary_sensor.motion_idle" };
+    setup("stream-always",          { ...streamBase, title: "Always (default)" });
+    setup("stream-never",           { ...streamBase, title: "Never", stream_when: "never" });
+    setup("stream-motion-idle",     { ...streamBase, title: "On motion (idle)",   stream_when: "motion" });
+    setup("stream-motion-active",   { ...streamBase, title: "On motion (active)", stream_when: "motion", motion: "binary_sensor.motion_active" });
+    setup("stream-doorbell-idle",   { ...streamBase, title: "On ring (idle)",     stream_when: "doorbell" });
+    setup("stream-doorbell-ringing",{ ...streamBase, title: "On ring (ringing)",  stream_when: "doorbell", doorbell: "binary_sensor.doorbell_ringing" });
+    setup("stream-entity-off",      { ...streamBase, title: "Entity off",  stream_when: "binary_sensor.motion_idle" });
+    setup("stream-entity-on",       { ...streamBase, title: "Entity on",   stream_when: "binary_sensor.motion_active" });
+    setup("stream-btn-hidden",      { ...streamBase, title: "Button hidden", stream_when: "never", show_stream_button: false });
 
     // ── interactions ──────────────────────────────────────────────────────────
     // All interaction demos use the same entity set so visual differences

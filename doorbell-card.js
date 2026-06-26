@@ -37,6 +37,34 @@ class DoorbellCard extends HTMLElement {
     return state.state === "on";
   }
 
+  _shouldLoadStream() {
+    if (this._streamOverride) return true;
+    const config = this._config;
+    const mode = config.stream_when ?? "always";
+    if (mode === "never") return false;
+    if (mode === "always") return true;
+    if (mode === "motion") {
+      if (!config.motion) return true;
+      return this._isActive(config.motion, this._getState(config.motion));
+    }
+    if (mode === "doorbell") {
+      if (!config.doorbell) return true;
+      return this._isActive(config.doorbell, this._getState(config.doorbell));
+    }
+    // Treat as a custom entity ID — load when state is not off/unavailable/unknown
+    const state = this._getState(mode);
+    if (!state) return false;
+    return state.state !== "off" && state.state !== "unavailable" && state.state !== "unknown";
+  }
+
+  _streamPauseLabel() {
+    const mode = this._config?.stream_when ?? "always";
+    if (mode === "never") return "Stream disabled";
+    if (mode === "motion") return "Waiting for motion";
+    if (mode === "doorbell") return "Waiting for ring";
+    return "Stream paused";
+  }
+
   _lastFired(entityId, state) {
     if (!state) return null;
     // event entities: state IS the ISO timestamp of the last firing
@@ -245,9 +273,20 @@ class DoorbellCard extends HTMLElement {
       `);
     }
 
+    const streamActive = config.camera && !cameraUnavailable && this._shouldLoadStream();
+    const showStreamButton = config.show_stream_button !== false;
+    const playSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
     const cameraSection = config.camera
       ? `<div class="camera-wrap">
-           ${cameraUnavailable ? `<div class="camera-placeholder">Unavailable</div>` : ""}
+           ${cameraUnavailable
+             ? `<div class="camera-placeholder"><span class="camera-placeholder-text">Unavailable</span></div>`
+             : !streamActive
+             ? `<div class="camera-placeholder">
+                  ${showStreamButton
+                    ? `<button class="stream-btn">${playSvg}Load stream</button>`
+                    : `<span class="camera-placeholder-text">${this._streamPauseLabel()}</span>`}
+                </div>`
+             : ""}
          </div>`
       : "";
 
@@ -283,22 +322,43 @@ class DoorbellCard extends HTMLElement {
           align-items: center;
         }
         .camera-wrap {
+          position: relative;
           width: 100%;
-          ${config.camera_aspect_ratio ? `aspect-ratio: ${config.camera_aspect_ratio};` : ""}
+          ${config.camera_aspect_ratio ? `aspect-ratio: ${config.camera_aspect_ratio};` : "min-height: 80px;"}
           border-radius: 8px;
           overflow: hidden;
           background: #111;
           ${hasDivider ? "margin-bottom: 12px;" : ""}
         }
         .camera-placeholder {
-          width: 100%;
-          padding: 24px 0;
+          position: absolute;
+          inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 13px;
           color: var(--secondary-text-color, #727272);
         }
+        .camera-placeholder-text {
+          padding: 24px 0;
+        }
+        .stream-btn {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 24px;
+          background: var(--primary-color, #03a9f4);
+          color: #fff;
+          font-size: 13px;
+          font-weight: 500;
+          font-family: inherit;
+          cursor: pointer;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+          transition: filter 0.15s;
+        }
+        .stream-btn:hover { filter: brightness(1.12); }
         .status {
           display: flex;
           flex-direction: column;
@@ -351,35 +411,28 @@ class DoorbellCard extends HTMLElement {
     `;
     this._attachInteractionListeners();
 
-    console.debug("[doorbell-card] camera config:", config.camera);
-    console.debug("[doorbell-card] cameraState:", cameraState);
-    console.debug("[doorbell-card] cameraUnavailable:", cameraUnavailable);
-    console.debug("[doorbell-card] hass present:", !!this._hass);
-    console.debug("[doorbell-card] existingStream:", existingStream);
+    const streamBtn = this.shadowRoot.querySelector(".stream-btn");
+    if (streamBtn) {
+      streamBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._streamOverride = true;
+        this._render();
+      });
+    }
 
-    if (config.camera && !cameraUnavailable && this._hass) {
+    if (streamActive) {
       const wrap = this.shadowRoot.querySelector(".camera-wrap");
-      console.debug("[doorbell-card] camera-wrap found:", wrap);
       if (wrap) {
         const tagName = "hui-image";
         const stream = (existingStream?.tagName?.toLowerCase() === tagName)
           ? existingStream
           : document.createElement(tagName);
-        console.debug("[doorbell-card] stream element:", stream, "reused:", stream === existingStream);
         stream.style.cssText = "width:100%;height:auto;display:block;";
         stream.hass = this._hass;
         stream.cameraImage = config.camera;
         stream.cameraView = "live";
         wrap.appendChild(stream);
-        console.debug("[doorbell-card] stream offsetWidth:", stream.offsetWidth, "offsetHeight:", stream.offsetHeight);
-        console.debug("[doorbell-card] stream shadowRoot:", stream.shadowRoot);
-        setTimeout(() => {
-          console.debug("[doorbell-card] stream (250ms later) offsetWidth:", stream.offsetWidth, "offsetHeight:", stream.offsetHeight);
-          console.debug("[doorbell-card] stream shadowRoot innerHTML:", stream.shadowRoot?.innerHTML);
-        }, 250);
       }
-    } else {
-      console.debug("[doorbell-card] skipped stream mount — camera:", !!config.camera, "unavailable:", !!cameraUnavailable, "hass:", !!this._hass);
     }
   }
 }
@@ -430,8 +483,9 @@ class DoorbellCardEditor extends HTMLElement {
         .section { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary-text-color, #727272); padding-bottom: 4px; border-bottom: 1px solid var(--divider-color, #e0e0e0); margin-top: 8px; }
         .row { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 12px; color: var(--secondary-text-color, #727272); }
-        input[type=text] { padding: 8px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 6px; font-size: 14px; color: var(--primary-text-color, #212121); background: var(--card-background-color, #fff); box-sizing: border-box; width: 100%; }
+        input[type=text], select { padding: 8px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 6px; font-size: 14px; color: var(--primary-text-color, #212121); background: var(--card-background-color, #fff); box-sizing: border-box; width: 100%; }
         ha-entity-picker { display: block; }
+        .row-inline { flex-direction: row; align-items: center; justify-content: space-between; }
       </style>
       <div class="form">
         <div class="section">Entities</div>
@@ -442,6 +496,23 @@ class DoorbellCardEditor extends HTMLElement {
         <div class="section">Display</div>
         <div class="row"><label>Title</label><input id="title" type="text" placeholder="Doorbell" /></div>
         <div class="row"><label>Camera aspect ratio</label><input id="camera_aspect_ratio" type="text" placeholder="e.g. 9/16, 4/3, 1/1 (auto if blank)" /></div>
+
+        <div class="section">Stream</div>
+        <div class="row">
+          <label>Load stream</label>
+          <select id="stream_when_preset">
+            <option value="always">Always</option>
+            <option value="motion">On motion</option>
+            <option value="doorbell">On ring</option>
+            <option value="never">Never</option>
+            <option value="entity">Entity state…</option>
+          </select>
+          <ha-entity-picker id="stream_when_entity" allow-custom-entity style="display:none;margin-top:4px;"></ha-entity-picker>
+        </div>
+        <div class="row row-inline">
+          <label>Show load button</label>
+          <input type="checkbox" id="show_stream_button" />
+        </div>
       </div>
     `;
 
@@ -465,6 +536,39 @@ class DoorbellCardEditor extends HTMLElement {
     const arEl = this.shadowRoot.getElementById("camera_aspect_ratio");
     arEl.value = c.camera_aspect_ratio ?? "";
     arEl.addEventListener("change", (e) => this._set("camera_aspect_ratio", e.target.value));
+
+    const presets = ["always", "motion", "doorbell", "never"];
+    const streamWhen = c.stream_when ?? "always";
+    const isPreset = presets.includes(streamWhen);
+    const presetEl = this.shadowRoot.getElementById("stream_when_preset");
+    const streamEntityEl = this.shadowRoot.getElementById("stream_when_entity");
+
+    presetEl.value = isPreset ? streamWhen : "entity";
+    if (!isPreset) {
+      streamEntityEl.style.display = "block";
+      streamEntityEl.value = streamWhen;
+      if (this._hass) streamEntityEl.hass = this._hass;
+    }
+
+    presetEl.addEventListener("change", (e) => {
+      if (e.target.value === "entity") {
+        streamEntityEl.style.display = "block";
+        if (this._hass) streamEntityEl.hass = this._hass;
+      } else {
+        streamEntityEl.style.display = "none";
+        this._set("stream_when", e.target.value === "always" ? undefined : e.target.value);
+      }
+    });
+
+    streamEntityEl.addEventListener("value-changed", (e) => {
+      this._set("stream_when", e.detail.value);
+    });
+
+    const showBtnEl = this.shadowRoot.getElementById("show_stream_button");
+    showBtnEl.checked = c.show_stream_button !== false;
+    showBtnEl.addEventListener("change", (e) => {
+      this._set("show_stream_button", e.target.checked ? undefined : false);
+    });
   }
 }
 

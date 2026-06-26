@@ -2,6 +2,8 @@
 
 A camera + doorbell + motion sensor card for Home Assistant. Displays a live camera thumbnail alongside binary sensor states for the doorbell and motion detector.
 
+<img width="1027" height="1254" alt="image" src="https://github.com/user-attachments/assets/c1d2d1ce-76e7-4681-997a-24b8df604df8" />
+
 ## Installation
 
 ### HACS (recommended)

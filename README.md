@@ -4,7 +4,7 @@ A camera + doorbell + motion sensor card for Home Assistant. Displays a live cam
 
 The stream can be configured so that it doesn't load instantly which is particularly useful for Nest doorbells because of their agressive rate limiting.
 
-<img width="1353" height="5193" alt="image" src="https://github.com/user-attachments/assets/0fb9df9a-20ed-4a0c-9142-f9153623b29b" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/0fb9df9a-20ed-4a0c-9142-f9153623b29b" />
 
 ## Installation
 
